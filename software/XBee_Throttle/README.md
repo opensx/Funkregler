@@ -47,10 +47,14 @@ your hardware, either for the
 or for the
 - "teensy", see https://www.pjrc.com/teensy/teensy31.html
 
-u8glib
-Encoder
-Bounce
-XBee
+* u8glib
+  Arduino:  https://bintray.com/olikraus/u8glib/Arduino
+  ARM(Teensy): https://bintray.com/olikraus/u8glib/ARM
+* Encoder
+* Bounce
+* XBee
+  Arduino: https://github.com/andrewrapp/xbee-arduino
+  Teensy 3.1/LC:  https://www.pjrc.com/teensy/teensy31.html
 
 (+ SX22h, SXCommand and sxutils, SXLoco, AddrSelect from this website)
 A
