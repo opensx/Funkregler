@@ -40,3 +40,20 @@ Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 
 (c) Michael Blank - 2015 - opensx.net
 
+#Libraries needed
+the following libraries are used - make sure you have a version matching to
+your hardware, either for the
+-  "Arduino Pro Mini" (ATMega328)
+or for the
+- "teensy", see https://www.pjrc.com/teensy/teensy31.html
+
+u8glib
+Encoder
+Bounce
+XBee
+
+(+ SX22h, SXCommand and sxutils, SXLoco, AddrSelect from this website)
+A
+C
+A
+ 
