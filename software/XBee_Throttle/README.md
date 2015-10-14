@@ -38,8 +38,6 @@ Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 5.9.2015 - "Batt" is displayed when battery below 3300 mV
    (and battery state [10mV] is sent every 10mins to coord: "B 352" )
 
-(c) Michael Blank - 2015 - opensx.net
-
 #Libraries needed
 the following libraries are used - make sure you have a version matching to
 your hardware, either for the
@@ -47,17 +45,19 @@ your hardware, either for the
 or for the
 - "teensy", see https://www.pjrc.com/teensy/teensy31.html
 
-* u8glib
-  Arduino:  https://bintray.com/olikraus/u8glib/Arduino
-  ARM(Teensy): https://bintray.com/olikraus/u8glib/ARM
+* u8glib Arduino:  https://bintray.com/olikraus/u8glib/Arduino
+* u8glib ARM(Teensy): https://bintray.com/olikraus/u8glib/ARM
 * Encoder
 * Bounce
-* XBee
-  Arduino: https://github.com/andrewrapp/xbee-arduino
-  Teensy 3.1/LC:  https://www.pjrc.com/teensy/teensy31.html
+* XBee Arduino: https://github.com/andrewrapp/xbee-arduino
+* XBee Teensy 3.1/LC:  https://www.pjrc.com/teensy/teensy31.html
 
 (+ SX22h, SXCommand and sxutils, SXLoco, AddrSelect from this website)
-A
-C
-A
- 
+
+You can use the "library manager" of the arduino IDE to install the 
+libraries, see
+<a href="https://www.arduino.cc/en/Guide/Libraries" target="_blank">Arduino 
+Libraries Guide</a>
+
+ (c) Michael Blank - 2015 - <a href="http://opensx.net>opensx.net" target="_blank">
+opensx.net</a>
