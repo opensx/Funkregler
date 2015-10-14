@@ -19,6 +19,7 @@ genutzte Fonts:
 Rotary Encoder für Speed und Adress Selection
 Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 
+14.10.2015 encButton Trackpower only toggled once
 13.10.2015 "waiting_for_response" modus hinzugefügt
     (nach: neue Lok selektiert, vor: noch keine Antwort von der Zentrale)
 
@@ -604,7 +605,7 @@ void loop()
          // toggle trackPower
          trackPower = !trackPower;
          sendTrackPower();
-         encButtonTimer = millis();  // toggle again after 2 secs
+         encButtonPressed = 0;  // do not toggle again
          #ifdef _DEBUG
          Serial.println("toggled trackpower.");
          #endif
