@@ -59,5 +59,5 @@ libraries, see
 <a href="https://www.arduino.cc/en/Guide/Libraries" target="_blank">Arduino 
 Libraries Guide</a>
 
- (c) Michael Blank - 2015 - <a href="http://opensx.net>opensx.net" target="_blank">
+ (c) Michael Blank - 2015 - <a href="http://opensx.net" target="_blank">
 opensx.net</a>
