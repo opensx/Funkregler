@@ -1,5 +1,3 @@
-#include <EEPROM.h>
-
 /** sxutils.cpp
  * contains utils to convert from bin to ascii string "payload"
  * which is used in xbee data transfer (API mode)
@@ -94,7 +92,7 @@ uint8_t num2payload(uint8_t start, uint16_t d) {
       payload[start+2]= p1 + '0';
       payload[start+3]='\n';
       payload[start+4]= 0;  // string end
-      return (start+5);
+      return (start+4);
    }
 
 }

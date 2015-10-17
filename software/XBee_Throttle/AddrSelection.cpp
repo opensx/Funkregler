@@ -121,7 +121,7 @@ void AddrSelection::update(int8_t delta) {
 void AddrSelection::decrease(int8_t ad) {
     _selectedAddress--;
     // for address in 100..103 range only decr by 1
-    if (_selectedAddress < MAX_ADDRESS) {
+    if (_selectedAddress <= MAX_ADDRESS) {
     if (ad > 1) {
       _selectedAddress-=2;
        if (ad > 3) {
@@ -139,7 +139,7 @@ void AddrSelection::decrease(int8_t ad) {
 void AddrSelection::increase(int8_t ad) {
     _selectedAddress++;
     // for address in 100..103 range only incr by 1
-    if(_selectedAddress < MAX_ADDRESS+2) {       
+    if(_selectedAddress < MAX_ADDRESS-2) {       
       if (ad > 1) {
         _selectedAddress+=2;
         if (ad > 3) {

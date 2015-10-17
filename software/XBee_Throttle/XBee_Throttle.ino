@@ -41,7 +41,7 @@ TODO Sleep einbauen
 *****************************************************************/
 
 #define HW_REV  "HW1.1" // or higher
-#define SW_REV  "SW1.1.6 - 13 Oct 2015"
+#define SW_REV  "SW1.1.7 - 17 Oct 2015"
 
 #define SELECTRIX_MODE    // use simple selectrix mode
 //#define DCC_MODE       // use DCC mode - NOT YET IMPLEMENTED !
@@ -52,7 +52,7 @@ TODO Sleep einbauen
 
 //#define _TEENSY_31     // default is now ATmega328 !
 //#define _TEENSY_LC
-#define _DEBUG_AVR // if defined, the debut output is sent to the 
+//#define _DEBUG_AVR // if defined, the debut output is sent to the 
                    // AT-configured XBEE
 // #define _DEBUG   // if debug => output to Serial Port ONLY FOR TEENSY !!
 
@@ -136,11 +136,16 @@ ModemStatusResponse msr = ModemStatusResponse();
 long timerAnalogIn = 0;
 long stopTime = 0;  // for blinking "STOP" on display
 
-int mode = MODE_NORMAL;
+int mode = MODE_WAITING_FOR_RESPONSE;
 long oldPosition = 0; // store encoder position
 SXLoco loco;   // construct an SXloco with address etc
 AddrSelection addrSelection;  // functions for address selection
 long requestTimer = 0;
+
+// these variables are defined in sxutils.cpp:
+//uint8_t lastAddr[N_ADDR];  // for storing the last 4 addresses
+//uint8_t addrUsage[N_ADDR];  // store usage of last 4 addresses
+//uint8_t indexLastAddr;
 
 uint16_t batteryLevel = 0;
 long lastBatteryTimer = 0;
@@ -176,11 +181,11 @@ void setup()
    
    Serial1.begin(9600); // XBee
    Serial.println("Teensy Processor");
-   delay(200);
+   delay(100);
    xbee.setSerial(Serial1);
 #else
 #ifdef _DEBUG_AVR
-   Serial.begin(57600); //XBee
+   Serial.begin(9600); //XBee
    Serial.println(HW_REV);
    Serial.println(SW_REV);
 #ifdef __AVR__
@@ -189,23 +194,33 @@ void setup()
    
 #else
    Serial.begin(9600); //XBee
-
-   delay(200);
+   delay(50);
    xbee.setSerial(Serial);
+   delay(50);
 #endif   // _DEBUG_AVR
 #endif   // defined(_TEENSY_LC) || defined(_TEENSY_31)
    
     // read 4 last used addresses and last used address from EEPROM and init loco
-   addrSelection.initFromEEPROM();
-   loco.setFromSXData(0);  // use 0 if we don't get data from central sx bus
-   sendRequestLoco(loco.getAddress());  // read state from central sx bus   
-      
+   addrSelection.initFromEEPROM();   
+   loco.setIndex(indexLastAddr);   // initialize loco address
+   
+#ifdef _DEBUG_AVR
+   Serial.print("indexLastAddr=");
+   Serial.println(indexLastAddr);
+   Serial.print("A..");
+   Serial.print(lastAddr[0]);
+   Serial.print(" ");
+   Serial.print(lastAddr[1]);
+   Serial.print(" ");
+   Serial.print(lastAddr[2]);
+   Serial.print(" ");
+   Serial.println(lastAddr[3]);  
+#endif  
+    
    coord64 = XBeeAddress64(0, 0);  //coordinator address
    zbTx = ZBTxRequest(coord64, (uint8_t *)payload, sizeof(payload));  // 64bit address
    zbTx.setAddress16(0); // addr16 = 0;
-   txStatus = ZBTxStatusResponse();
-
-   
+   txStatus = ZBTxStatusResponse();   
 
    #if defined(_DEBUG) || defined(_DEBUG_AVR)
    Serial.print("loco adr=");
@@ -243,7 +258,12 @@ void setup()
    #endif
    
    delay(10);
-   sendBatteryVoltage();
+   sendBatteryVoltage();  // read initial battery value and send to basis
+
+   // finally read state of loco from SX Bus
+   sendRequestLoco(loco.getAddress());  // read state from central sx bus   
+   mode = MODE_WAITING_FOR_RESPONSE;
+   requestTimer=millis();  
 }
 
 void powerDown () {
