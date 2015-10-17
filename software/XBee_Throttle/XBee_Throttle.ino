@@ -19,6 +19,7 @@ genutzte Fonts:
 Rotary Encoder für Speed und Adress Selection
 Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 
+17.10.2015 Gleissp Ein/Aus korr., Init korr.
 14.10.2015 encButton Trackpower only toggled once
 13.10.2015 "waiting_for_response" modus hinzugefügt
     (nach: neue Lok selektiert, vor: noch keine Antwort von der Zentrale)
