@@ -14,7 +14,6 @@
 */
 
 AddrSelection::AddrSelection() {
-    ;
 }
 
 void AddrSelection::initFromEEPROM() {
@@ -73,7 +72,7 @@ uint8_t AddrSelection::finish() {
                     }
                 }
                 lastAddr[indexLastAddr] = addr;
-                addrUsage[indexLastAddr] = 1;
+                addrUsage[indexLastAddr] = 3;
                 EEPROM.write(EEPROM_START + 1+ indexLastAddr, addr);
                 EEPROM.write(EEPROM_START, indexLastAddr);
              }

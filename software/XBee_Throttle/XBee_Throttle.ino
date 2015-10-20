@@ -19,7 +19,6 @@ genutzte Fonts:
 Rotary Encoder für Speed und Adress Selection
 Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 
-17.10.2015 Gleissp Ein/Aus korr., Init korr.
 14.10.2015 encButton Trackpower only toggled once
 13.10.2015 "waiting_for_response" modus hinzugefügt
     (nach: neue Lok selektiert, vor: noch keine Antwort von der Zentrale)
@@ -40,16 +39,22 @@ Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 TODO Sleep einbauen
 
 *****************************************************************/
+#include "pcb-type.h"
 
-#define HW_REV  "HW1.1" // or higher
-#define SW_REV  "SW1.1.7 - 17 Oct 2015"
+#define SW_REV  "1.1.9"
 
 #define SELECTRIX_MODE    // use simple selectrix mode
 //#define DCC_MODE       // use DCC mode - NOT YET IMPLEMENTED !
 //#define DISP_ROTATED    // if defined, rotate display by 180' and
                           // exchange "A" and "F" buttons
 
+#ifndef HW_REV
+ #error You must define a value for HW_REV
+#endif
 
+#ifndef SELECTRIX_MODE
+ #error Currently only SELECTRIX_MODE is possible
+#endif
 
 //#define _TEENSY_31     // default is now ATmega328 !
 //#define _TEENSY_LC
@@ -76,34 +81,7 @@ TODO Sleep einbauen
 #include "SXLoco.h"
 #include "AddrSelection.h"
 
-// Setup a buttons
-#if defined(_TEENSY_31) || defined(_TEENSY_LC)
-#define ENC_PIN1   5
-#define ENC_PIN2   6
-#define ENC_BTN    7   // sets speed to zero
-#define ADDR_BTN  19   // toogle between address selection and speed selection
-#define F0_BTN    18
-#define F1_BTN    17
-#define PWR_DOWN  21   // to generate a power down interrupt
-#define MEAS_VIN  A6
-#define SLEEP_RQ 22
-#else   // arduino pro mini
-#define ENC_PIN1   3
-#define ENC_PIN2   2  // =5 for HW 1.1
-#define ENC_BTN    5  // =2 for HW 1.1 + switch on  // sets speed to zero
-#ifndef DISP_ROTATED
-#define ADDR_BTN  6    // toogle between address selection and speed selection
-#define F0_BTN    7
-#define F1_BTN    8
-#else   // also rename 'A' 'L' 'F' buttons
-#define ADDR_BTN  9    // toogle between address selection and speed selection
-#define F0_BTN    7
-#define F1_BTN    6
-#endif  // DISP_ROTATED
-#define PWR_DISP  A2   // power out for oled display
-#define SLEEP_RQ  A1   // let xbee sleep
-#define MEAS_VIN  A0   // measure battery voltage
-#endif
+
 
 Bounce encButton(ENC_BTN,100);
 Bounce addrButton(ADDR_BTN, 100);
@@ -135,6 +113,7 @@ ZBRxResponse rx = ZBRxResponse();
 ModemStatusResponse msr = ModemStatusResponse();
 
 long timerAnalogIn = 0;
+long readFromCentral = 0;
 long stopTime = 0;  // for blinking "STOP" on display
 
 int mode = MODE_WAITING_FOR_RESPONSE;
@@ -195,7 +174,6 @@ void setup()
    
 #else
    Serial.begin(9600); //XBee
-   delay(50);
    xbee.setSerial(Serial);
    delay(50);
 #endif   // _DEBUG_AVR
@@ -255,24 +233,24 @@ void setup()
    analogReadResolution(12);
    analogReadAveraging(32); // this one is optional.
    #elif __AVR__   // or atmega328p
-   // TODO 
+   // no init necessary
    #endif
-   
-   delay(10);
-   sendBatteryVoltage();  // read initial battery value and send to basis
 
+   // picture loop
+   u8g.firstPage();
+   do {
+     drawInit();
+   } while( u8g.nextPage() );
+         
+   delay(1000);
+   sendBatteryVoltage();  // read initial battery value and send to basis
+   delay(2000);
    // finally read state of loco from SX Bus
    sendRequestLoco(loco.getAddress());  // read state from central sx bus   
    mode = MODE_WAITING_FOR_RESPONSE;
    requestTimer=millis();  
 }
 
-void powerDown () {
-  // save loco address when powering down
- /* if (EEPROM.read(EEPROM_ADDR_CHANNEL) != loco.getAddress()) {
-            EEPROM.write(EEPROM_ADDR_CHANNEL,(0xff)&loco.getAddress());
-  } */
-}
 
 void updateLocoSpeed() {
    long newPosition = encoder.read() >> 2;
@@ -300,6 +278,15 @@ void drawWaiting() {
    u8g.setPrintPos(60,43);  // for speed string
    u8g.print("???");
 
+}
+
+void drawInit() {
+    // draw SW and HW Rev on screen at start
+   u8g.setFont(u8g_font_helvB12);
+   u8g.drawStr( 0, 26,"HW:");
+   u8g.drawStr( 34, 26,HW_REV);
+   u8g.drawStr( 0, 46,"SW:");
+   u8g.drawStr( 34, 46,SW_REV);
 }
 
 void drawAddressSelection() {
@@ -346,10 +333,13 @@ void drawAddressAndSpeed(void) {
    }
 
    u8g_uint_t stopPositionX = 84;
-   if (batteryLevel < 330) {
+   if (batteryLevel < 320) {  // battery level is in 10mV steps
       u8g.drawStr( 62, 64, "Batt");
       stopPositionX = 100;  // move to right if "Batt" is shown
-   }
+   } 
+   //u8g.setPrintPos( 62, 64);
+   //u8g.print(batteryLevel);
+   
    if (trackPower == 0) {  // show blinking "STOP" 
       if ( (millis()-stopTime) < 700) {
          u8g.drawStr(stopPositionX, 64, "STOP");
@@ -522,26 +512,23 @@ void sendPayloadToSerial() {
 
 void sendBatteryVoltage() {
  //TODO implement with simple analogRead()  
-   #ifdef _TEENSY_LC
+#ifdef _TEENSY_LC
    uint32_t mv=0;
    // compare bandgap channel 39 (hack analog.c AD27) to Vcc   LC
    //  datasheet says  1.00  min/max 0.97/1.03 v
    //  see https://forum.pjrc.com/threads/26117-Teensy-3-1-Voltage-sensing-and-low-battery-alert
 
-   mv = 1000 * 4096 /analogRead(39);
-   #elif _TEENSY_31
+   mv = 100 * 4096 /analogRead(39); // in 10mV steps
+#elif _TEENSY_31
    uint32_t mv=0;
    // for Teensy 3.1, only valid between 2.0V and 3.5V. Returns in millivolts.
    uint32_t x = analogRead(39);
-   mv = (178*x*x + 2688743864 - 1182047 * x) / 371794;
-   #else
-   // avr - not yet implemented
-   uint16_t mv = 3500;
-   // mv = AnalogRead(A2) * 3 /2;
-   #endif
-   
+   mv = ((178*x*x + 2688743864 - 1182047 * x) / 371794) / 10; // in 10mV steps
+#else
+   // avr - voltage read is 0.5* the batt.voltage
+   uint16_t mv = (analogRead(MEAS_VIN)*13)/2; // approximates 2*3300mV/1023 / 10 (in 10mV steps)
+#endif
 
-   mv = mv/10; // reduce to 3 digits
    makePayloadCommandAndNumber('B',(uint16_t)mv);
    
 #if defined(_DEBUG) || defined(_DEBUG_AVR)
@@ -607,20 +594,21 @@ void loop()
          } while( u8g.nextPage() );
       }
    } else if (mode == MODE_NORMAL) {
-      // no address selection running - get speed value
+      // no address selection running - update speed value
       if ((millis() - timerAnalogIn) >200) {
          timerAnalogIn = millis();
          updateLocoSpeed();
          if ( loco.hasChanged() ) {
             loco.resetChanged();
             sendSpeed();
-         }
+         } 
          // picture loop
          u8g.firstPage();
          do {
             drawAddressAndSpeed();
          } while( u8g.nextPage() );
       } //endif timerAnalogIn
+
       if ( encButtonPressed && 
            ((millis() - encButtonTimer) > 1300 ) ) {
          // toggle trackPower
@@ -639,7 +627,7 @@ void loop()
 
    } else if (mode == MODE_WAITING_FOR_RESPONSE) {
       // check for timeout for waiting for response
-      if ((millis() - requestTimer) > 1000 )  {
+      if ((millis() - requestTimer) > 2000 )  {
          loco.setFromSXData(0); // reset loco
          mode = MODE_NORMAL;      
       }

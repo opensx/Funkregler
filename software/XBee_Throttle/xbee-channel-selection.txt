@@ -1,0 +1,44 @@
+http://stackoverflow.com/questions/5382666/how-do-you-set-the-channel-on-a-xbee-pro-series-2
+	
+
+Channel selection with the XBee ZB (S2, S2B, S2C) series of modules works differently than with the XBee 802.15.4 (S1) modules. Channel selection is automatic with ZB (as opposed to it being manual with the 802.15.4 modules).
+
+You normally never need to manipulate the channel selection parameters with ZB. Modules find each other and associate with each other if they can.
+
+If you're modules just can't seem to find each other it usually comes down to a mismatch in the PAN settings (ID), security settings (LK), or network joining permission settings on the coordinator (NJ).
+
+Not a lot of information exists on the web outside of the Digi's XBee ZB OEM manual. For reference sake, channel selection with ZB works like this:
+
+    XBee ZB Coordinator is powered up
+    The XBee ZB Coordinator reads its SC parameter and builds a list of candidate channels to scan
+    The XBee ZB Coordinator then performs an energy scan on each candidate channel
+    The XBee ZB Coordinator then chooses the channel with the least amount of energy on it
+
+This procedure aims to pick a channel with the least amount of noise on it be it from microwave ovens, WiFi networks, or anything else that might be transmitting on the 2.4GHz frequency band.
+
+Any router or end devices joining a network with consult their SC parameters first, then they will try and search for networks they can join which match their PAN and security parameters. They will join and stay joined to the first network they can--with some minor exceptions (see the JV and NW parameters, for example).
+
+If you want to force a channel selection you must set the SC parameter to enable only a single channel. The SC parameter is a bitmask1. Each bit set in the mask will enable one additional channel. What's tricky about this parameter is that the first bit (bit 0) is not channel 0, it's channel 11 (0x0B). For ease of use, if you wanted to lock an XBee ZB to a single channel here would be the values:
+
++---------------+---------------+------------------+-------------------------+
+| Channel (Dec) | Channel (Hex) | XBee ZB SC Value |    XBee Availability    |
++---------------+---------------+------------------+-------------------------+
+|            11 | 0xB           | 0x1              | All                     |
+|            12 | 0xC           | 0x2              | All                     |
+|            13 | 0xD           | 0x4              | All                     |
+|            14 | 0xE           | 0x8              | All                     |
+|            15 | 0xF           | 0x10             | All                     |
+|            16 | 0x10          | 0x20             | All                     |
+|            17 | 0x11          | 0x40             | All                     |
+|            18 | 0x12          | 0x80             | All                     |
+|            19 | 0x13          | 0x100            | All                     |
+|            20 | 0x14          | 0x200            | All                     |
+|            21 | 0x15          | 0x400            | All                     |
+|            22 | 0x16          | 0x800            | All                     |
+|            23 | 0x17          | 0x1000           | All                     |
+|            24 | 0x18          | 0x2000           | All                     |
+|            25 | 0x19          | 0x4000           | S1, S2B, S2C (not S2)   |
+|            26 | 0x1A          | 0x8000           | S1 only                 |
++---------------+---------------+------------------+-------------------------+
+
+
