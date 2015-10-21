@@ -13,7 +13,7 @@ SSD1306 display 128x64 - weil sie weniger RAM braucht als die
 ADAfruit lib, wird die U8glib benutzt.
 genutzte Fonts: 
    u8g_font_fur42n
-   u8g_font_fur20
+   u8g_font_fur20r
    u8g_font_helvB12  
 
 Rotary Encoder für Speed und Adress Selection
@@ -272,7 +272,7 @@ void updateAddrSel() {
 
 void drawWaiting() {
     // redraw the complete screen in "waiting for response" mode
-   u8g.setFont(u8g_font_fur20);
+   u8g.setFont(u8g_font_fur20r);
    u8g.setPrintPos(0,30);  // for loco address string
    u8g.print(loco.getAddress());
    u8g.setPrintPos(60,43);  // for speed string
@@ -294,7 +294,7 @@ void drawAddressSelection() {
    u8g.setFont(u8g_font_fur42n);
    u8g.setPrintPos(60,50);
    u8g.print(addrSelection.getCurrentAddress());
-   u8g.setFont(u8g_font_fur20);
+   u8g.setFont(u8g_font_fur20r);
    u8g.drawStr( 0, 26, "A");
    u8g.drawStr( 0, 56, "?");
    uint8_t sIndex = addrSelection.getCurrentStoredIndex();
@@ -313,13 +313,13 @@ void drawAddressAndSpeed(void) {
    u8g.setPrintPos(60,43);  // for speed string
    u8g.print(loco.getSpeed());  
 
-   u8g.setFont(u8g_font_fur20);
+   u8g.setFont(u8g_font_fur20r);
    if (loco.getBackward()) {
       u8g.drawStr( 0, 60, "<");
    } else {
       u8g.drawStr( 0, 60, ">");
    }
-   u8g.setFont(u8g_font_fur20);
+   u8g.setFont(u8g_font_fur20r);
    u8g.setPrintPos(0,30);  // for loco address string
    u8g.print(loco.getAddress());
 
