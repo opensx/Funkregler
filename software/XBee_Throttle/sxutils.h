@@ -18,6 +18,11 @@
 #define MAX_ADDRESS   99
 #define INVALID_UI8   255  // invalid uint8_t value
 
+// TrackPower (Gleisspannungsbit) states
+#define POWER_UNKNOWN   2
+#define POWER_OFF       0
+#define POWER_ON        1
+
 
 #define EEPROM_START   10   // store relative index (0..3) into current address
    // last used loco

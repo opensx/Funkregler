@@ -8,6 +8,7 @@ for teensy's:
 
 for avr/atmega328
   XBee is connected to RX (pin0) and TX (pin1)
+  !! Make sure you have selected the 3.3V/8Mhz Arduino
 
 SSD1306 display 128x64 - weil sie weniger RAM braucht als die 
 ADAfruit lib, wird die U8glib benutzt.
@@ -19,6 +20,7 @@ genutzte Fonts:
 Rotary Encoder für Speed und Adress Selection
 Buttons für Adress-Selection ("A"), Licht (F0="L") und Function (F1="F")
 
+21.10.2015 fonts optimiert, um Codesize zu reduzieren
 14.10.2015 encButton Trackpower only toggled once
 13.10.2015 "waiting_for_response" modus hinzugefügt
     (nach: neue Lok selektiert, vor: noch keine Antwort von der Zentrale)
@@ -41,7 +43,7 @@ TODO Sleep einbauen
 *****************************************************************/
 #include "pcb-type.h"
 
-#define SW_REV  "1.1.9"
+#define SW_REV  "1.1.10"
 
 #define SELECTRIX_MODE    // use simple selectrix mode
 //#define DCC_MODE       // use DCC mode - NOT YET IMPLEMENTED !
@@ -70,6 +72,9 @@ TODO Sleep einbauen
 #define MODE_NORMAL               0
 #define MODE_ADDRESS_SELECTION    1 // short press of "A" button
 #define MODE_WAITING_FOR_RESPONSE 2 // waiting for loco info from central
+
+#define BLOCKING_TIME  2000   // don#t read feedback from SX Bus for 2 secs
+                              // after sending new speed value
 
 
 #include <EEPROM.h>
@@ -112,15 +117,20 @@ XBeeResponse response = XBeeResponse();
 ZBRxResponse rx = ZBRxResponse();
 ModemStatusResponse msr = ModemStatusResponse();
 
+
+
 long timerAnalogIn = 0;
 long readFromCentral = 0;
 long stopTime = 0;  // for blinking "STOP" on display
+long sentSpeedTime = 0;    // if millis()-sentSpeedTime < 300ms => 
+                           // don't interpret feedback
+long sentRequestTime = 0;  // time of last Request of LocoSpeed from central
 
 int mode = MODE_WAITING_FOR_RESPONSE;
 long oldPosition = 0; // store encoder position
 SXLoco loco;   // construct an SXloco with address etc
 AddrSelection addrSelection;  // functions for address selection
-long requestTimer = 0;
+
 
 // these variables are defined in sxutils.cpp:
 //uint8_t lastAddr[N_ADDR];  // for storing the last 4 addresses
@@ -132,7 +142,7 @@ long lastBatteryTimer = 0;
 
 long lastBlink = 0 ;
 
-uint8_t trackPower = 0;  // 0=no power, 1=power on
+uint8_t trackPower = POWER_UNKNOWN;  // or POWER_OFF, POWER_ON
 long redrawTime = 0;    // timer for redrawing graphics
 long encButtonTimer = 0;   // to check for LONG PRESS of encoder button
 uint8_t encButtonPressed = 0;
@@ -248,7 +258,6 @@ void setup()
    // finally read state of loco from SX Bus
    sendRequestLoco(loco.getAddress());  // read state from central sx bus   
    mode = MODE_WAITING_FOR_RESPONSE;
-   requestTimer=millis();  
 }
 
 
@@ -331,7 +340,12 @@ void drawAddressAndSpeed(void) {
    if (loco.getF1()) {
       u8g.drawStr( 48, 64, "F");
    }
-
+   // For debugging
+   if ((millis() - sentSpeedTime) <=BLOCKING_TIME) {
+      u8g.drawStr(40,10,"b");
+   } else {
+      u8g.drawStr(40,10,"-");
+   }
    u8g_uint_t stopPositionX = 84;
    if (batteryLevel < 320) {  // battery level is in 10mV steps
       u8g.drawStr( 62, 64, "Batt");
@@ -340,12 +354,14 @@ void drawAddressAndSpeed(void) {
    //u8g.setPrintPos( 62, 64);
    //u8g.print(batteryLevel);
    
-   if (trackPower == 0) {  // show blinking "STOP" 
+   if (trackPower == POWER_OFF) {  // show blinking "STOP" 
       if ( (millis()-stopTime) < 700) {
          u8g.drawStr(stopPositionX, 64, "STOP");
       } else if ((millis()-stopTime) >= 1400) {
          stopTime = millis();
       }
+   } else if (trackPower == POWER_UNKNOWN) {
+      u8g.drawStr(stopPositionX, 64, "GL?");
    }
 
 }
@@ -380,7 +396,7 @@ void addrButtonClick() {
                loco.setIndex(indexLastAddr);
                sendRequestLoco(loco.getAddress());  // read state from central sx bus
                mode = MODE_WAITING_FOR_RESPONSE;
-               requestTimer=millis();
+
              } else {
                mode = MODE_NORMAL;
              }
@@ -426,6 +442,8 @@ void sendSpeed() {
    uint8_t addr = loco.getAddress();
    uint8_t sx= loco.getSXData();
    makePayloadCommandAnd2Numbers('S',addr, sx);
+   sentSpeedTime = millis();  // used for blocking of 
+          // feedback until basis has changed value on SX Bus
 #if defined(_DEBUG) || defined(_DEBUG_AVR)
    sendPayloadToSerial();
 #endif   // defined(_DEBUG) || defined(_DEBUG_AVR)
@@ -443,7 +461,7 @@ void sendSpeed() {
  */
 void sendRequestLoco(uint8_t addr) {
    makePayloadCommandAndNumber('R',addr);
-
+   sentRequestTime=millis();
 #if defined(_DEBUG) || defined(_DEBUG_AVR)
    sendPayloadToSerial();
 #endif   // defined(_DEBUG) || defined(_DEBUG_AVR)
@@ -472,13 +490,16 @@ void interpretCommand(String s) {
       if (i_ch == 127) {
          // trackpower command on channel 127
          if (i_value == 0) {
-            trackPower = 0;
+            trackPower = POWER_OFF;
          } else {
-            trackPower = 1;
+            trackPower = POWER_ON;
          }
       }  else if ((loco.getAddress() == i_ch) && (i_value >= 0) && (i_value <= 255) ) {
          // received sx data for the currently controlled loco
-         loco.setFromSXData((uint8_t)i_value) ;
+         if ( (millis() - sentSpeedTime) > BLOCKING_TIME) {
+            // set only when throttle is inactive
+            loco.setFromSXData((uint8_t)i_value) ;
+         }
          if (mode == MODE_WAITING_FOR_RESPONSE) {
             // reset to normal if response received
             mode = MODE_NORMAL;
@@ -489,7 +510,11 @@ void interpretCommand(String s) {
 
 void sendTrackPower() {
    // send value of trackpower on channel 127
-   makePayloadCommandAnd2Numbers('S',127,trackPower);
+   if (trackPower == POWER_OFF) {
+      makePayloadCommandAnd2Numbers('S',127,0);
+   } else if (trackPower == POWER_ON) {
+      makePayloadCommandAnd2Numbers('S',127,1);
+   }  // do nothing when power state not known
 
 #ifndef _DEBUG_AVR
    xbee.send(zbTx);
@@ -599,9 +624,12 @@ void loop()
          timerAnalogIn = millis();
          updateLocoSpeed();
          if ( loco.hasChanged() ) {
+            sentSpeedTime = millis();
             loco.resetChanged();
             sendSpeed();
-         } 
+         } else {
+            
+         }
          // picture loop
          u8g.firstPage();
          do {
@@ -609,10 +637,22 @@ void loop()
          } while( u8g.nextPage() );
       } //endif timerAnalogIn
 
-      if ( encButtonPressed && 
-           ((millis() - encButtonTimer) > 1300 ) ) {
-         // toggle trackPower
-         trackPower = !trackPower;
+      // if throttle not active, request feedback from SX bus
+      // do this at a maximum of every 2 seconds
+      if ( ((millis()-sentSpeedTime) > BLOCKING_TIME) 
+          && ((millis()-sentRequestTime) > 2000) ) {
+         sendRequestLoco(loco.getAddress());  // read state from central sx bus  
+      }
+            
+      if ( encButtonPressed
+           && ((millis() - encButtonTimer) > 1300 ) 
+           && (trackPower != POWER_UNKNOWN) ) {  
+         // toggle trackPower (only when in known state)
+         if (trackPower == POWER_ON) {
+           trackPower = POWER_OFF;
+         } else {
+           trackPower = POWER_ON;
+         }
          sendTrackPower();
          encButtonPressed = 0;  // do not toggle again
          #ifdef _DEBUG
@@ -627,7 +667,7 @@ void loop()
 
    } else if (mode == MODE_WAITING_FOR_RESPONSE) {
       // check for timeout for waiting for response
-      if ((millis() - requestTimer) > 2000 )  {
+      if ((millis() - sentRequestTime) > 2000 )  {
          loco.setFromSXData(0); // reset loco
          mode = MODE_NORMAL;      
       }
