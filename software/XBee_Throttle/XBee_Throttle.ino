@@ -58,12 +58,6 @@ TODO Sleep einbauen
  #error Currently only SELECTRIX_MODE is possible
 #endif
 
-//#define _TEENSY_31     // default is now ATmega328 !
-//#define _TEENSY_LC
-//#define _DEBUG_AVR // if defined, the debut output is sent to the 
-                   // AT-configured XBEE
-// #define _DEBUG   // if debug => output to Serial Port ONLY FOR TEENSY !!
-
 // Setup a RotaryEncoder
 //#define ENCODER_DO_NOT_USE_INTERRUPTS
 #define ENCODER_USE_INTERRUPTS
@@ -224,9 +218,6 @@ void setup()
 
    pinMode(SLEEP_RQ,OUTPUT);
    digitalWrite(SLEEP_RQ,LOW);   // wake up xbee
-#if defined(_TEENSY_31) || defined(_TEENSY_LC)
-   attachInterrupt(PWR_DOWN, powerDown, FALLING);
-#endif 
    delay(100);
 
    #ifdef _TEENSY_LC
@@ -238,7 +229,7 @@ void setup()
    analogReadAveraging(32);
    PMC_REGSC |= PMC_REGSC_BGBE;
   
-   #elif _TEENSY_31
+   #elif defined (_TEENSY_31)
    analogReference(EXTERNAL);
    analogReadResolution(12);
    analogReadAveraging(32); // this one is optional.
@@ -544,7 +535,7 @@ void sendBatteryVoltage() {
    //  see https://forum.pjrc.com/threads/26117-Teensy-3-1-Voltage-sensing-and-low-battery-alert
 
    mv = 100 * 4096 /analogRead(39); // in 10mV steps
-#elif _TEENSY_31
+#elif defined(_TEENSY_31)
    uint32_t mv=0;
    // for Teensy 3.1, only valid between 2.0V and 3.5V. Returns in millivolts.
    uint32_t x = analogRead(39);

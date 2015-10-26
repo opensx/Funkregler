@@ -5,17 +5,17 @@
 #ifndef PCB_TYPE_H_
 #define PCB_TYPE_H_
 
-//#define HW_REV  1.0        // pcb with teensy
+#define HW_REV  "1.0"        // pcb with teensy
 //#define HW_REV  1.1p   // prototype with Arduino Pro Mini
-#define HW_REV   "1.1"     // pcb 1.1 with Arduino Pro Mini
+//#define HW_REV   "1.1"     // pcb 1.1 with Arduino Pro Mini
 
-#define DISP_ROTATED    // if defined, rotate display by 180' and
+//#define DISP_ROTATED    // if defined, rotate display by 180' and
                           // exchange "A" and "F" buttons
 
 
 
 //#define _TEENSY_31     // default is now ATmega328 !
-//#define _TEENSY_LC
+#define _TEENSY_LC
 //#define _DEBUG_AVR // if defined, the debut output is sent to the 
                    // AT-configured XBEE
 // #define _DEBUG   // if debug => output to Serial Port ONLY FOR TEENSY !!
